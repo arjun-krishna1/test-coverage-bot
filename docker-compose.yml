@@ -1,0 +1,22 @@
+services:
+  test-coverage-bot:
+    build: .
+    env_file:
+      - .env.local
+    environment:
+      GITHUB_REPOSITORY: ${GITHUB_REPOSITORY:-apache/superset}
+      AUTOTEST_LABEL: ${AUTOTEST_LABEL:-autotest}
+      POLL_INTERVAL_SECONDS: ${POLL_INTERVAL_SECONDS:-600}
+    volumes:
+      - ./outputs:/app/outputs
+    command:
+      - --repo
+      - ${GITHUB_REPOSITORY:-apache/superset}
+      - --label
+      - ${AUTOTEST_LABEL:-autotest}
+      - --fixture
+      - examples/github-issues-autotest.fixture.json
+      - --dry-run
+      - --once
+      - --output-dir
+      - outputs

@@ -1,0 +1,58 @@
+name: Autotest Devin Automation
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+concurrency:
+  group: autotest-devin-automation
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - name: Check out bot repo
+        uses: actions/checkout@v4
+
+      - name: Restore processed issue state
+        uses: actions/cache@v4
+        with:
+          path: outputs/processed-issues.json
+          key: autotest-processed-issues-${{ github.run_id }}
+          restore-keys: |
+            autotest-processed-issues-
+
+      - name: Build Docker image
+        run: docker build -t test-coverage-bot .
+
+      - name: Run automation
+        run: |
+          docker run --rm \
+            -e DEVIN_API_KEY="${{ secrets.DEVIN_API_KEY }}" \
+            -e DEVIN_ORG_ID="${{ secrets.DEVIN_ORG_ID }}" \
+            -e DEVIN_CREATE_AS_USER_ID="${{ secrets.DEVIN_CREATE_AS_USER_ID }}" \
+            -e GITHUB_TOKEN="${{ github.token }}" \
+            -e GITHUB_REPOSITORY="${{ github.repository }}" \
+            -e AUTOTEST_LABEL="autotest" \
+            -e POLL_INTERVAL_SECONDS="600" \
+            -v "$PWD/outputs:/app/outputs" \
+            test-coverage-bot \
+              --repo "${{ github.repository }}" \
+              --label autotest \
+              --max-cycles 6 \
+              --output-dir outputs \
+              --state-file outputs/processed-issues.json
+
+      - name: Upload automation outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-coverage-bot-outputs
+          path: outputs/

@@ -1,0 +1,19 @@
+{
+  "repository": "apache/superset",
+  "issues": [
+    {
+      "number": 12345,
+      "title": "Add embedded entrypoint tests for guest auth and data-mask behavior",
+      "html_url": "https://github.com/apache/superset/issues/12345",
+      "labels": [
+        {
+          "name": "autotest"
+        },
+        {
+          "name": "coverage-improvement"
+        }
+      ],
+      "body": "Coverage data:\n\n- File: `superset-frontend/src/embedded/index.tsx`\n- Lines: **0.00%** (`0 / 98`)\n- Branches: **0.00%** (`0 / 28`)\n- Functions: **0.00%** (`0 / 18`)\n\nWhy this matters:\n\nThe embedded entrypoint initializes embedded dashboards, guest-user permissions, unauthorized handling, iframe-only behavior, and data-mask event emission to the parent application.\n\nAcceptance criteria:\n\n- Cover the non-iframe failure message path.\n- Cover successful startup after `/api/v1/me/roles/` returns user/role data.\n- Cover guest unauthorized handling.\n- Cover data-mask emission through `Switchboard.emit`."
+    }
+  ]
+}

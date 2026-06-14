@@ -5,7 +5,7 @@ services:
       - .env.local
     environment:
       GITHUB_REPOSITORY: ${GITHUB_REPOSITORY:-apache/superset}
-      AUTOTEST_LABEL: ${AUTOTEST_LABEL:-autotest}
+      ISSUE_LABEL: ${ISSUE_LABEL:-coverage-improvement}
       POLL_INTERVAL_SECONDS: ${POLL_INTERVAL_SECONDS:-600}
     volumes:
       - ./outputs:/app/outputs
@@ -13,9 +13,9 @@ services:
       - --repo
       - ${GITHUB_REPOSITORY:-apache/superset}
       - --label
-      - ${AUTOTEST_LABEL:-autotest}
+      - ${ISSUE_LABEL:-coverage-improvement}
       - --fixture
-      - examples/github-issues-autotest.fixture.json
+      - examples/github-issues-coverage-improvement.fixture.json
       - --dry-run
       - --once
       - --output-dir

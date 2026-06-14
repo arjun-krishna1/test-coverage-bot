@@ -1,64 +1,68 @@
 # Test Coverage Bot
 
-Polling automation that turns open GitHub issues labeled `autotest` into Devin sessions that create focused test-coverage pull requests.
+Automation that turns labeled GitHub issues into Devin sessions that create focused test coverage pull requests.
 
-This project is a simple end-to-end demo for adopting Devin in an engineering workflow: engineers file coverage-gap issues, add the `autotest` label, and the bot periodically asks Devin to remediate the issue with a reviewable PR.
+Uses GitHub issues as the work queue, Devin as the autonomous coding agent, and GitHub comments/artifacts as lightweight observability.
 
-## Problem
+## What problem does this solve?
 
-Low test coverage creates production risk and slows engineering teams down. Coverage gaps are often known, but manually turning each gap into high-quality tests is tedious and easy to postpone.
+Low test coverage creates release risk and slows engineering velocity. Improving coverage can be time-consuming and repetitive.
 
-This bot converts that backlog into an automated workflow:
+This bot turns that backlog into an actionable workflow:
 
-1. Engineers create GitHub issues for important coverage gaps.
-2. They label selected issues `autotest`.
-3. The workflow polls for labeled issues every 10 minutes while it is running.
-4. The bot creates a Devin session with the issue context, target file, coverage data, and acceptance criteria.
-5. Devin investigates the repository, adds focused tests, runs relevant commands, and opens a pull request when possible.
-6. The bot posts a GitHub issue comment and writes lightweight output artifacts so the team can track progress.
+1. An engineer creates a GitHub issue describing a coverage gap.
+2. The issue is labeled `coverage-improvement`.
+3. The workflow polls labeled issues every 10 minutes while it is running.
+4. The bot starts a Devin session with the issue context, target file, coverage data, and acceptance criteria.
+5. Devin adds tests, runs relevant commands, opens a PR, and posts a follow-up issue comment with the PR link, updated coverage, tests run, and caveats.
 
-## Architecture
+For demo simplicity, this uses polling instead of GitHub webhook infrastructure. The label is still the product trigger; the workflow discovers labeled issues on a schedule.
+
+## How it works
 
 ```mermaid
 flowchart TD
-    A[GitHub issue labeled autotest] --> B[Scheduled or manual GitHub Actions workflow]
-    B --> C[Dockerized polling bot]
-    C --> D[Fetch open issues with autotest label]
-    D --> E[Parse issue body, target file, and coverage metrics]
-    E --> F[Build focused Devin PR prompt]
-    F --> G[Create Devin session via Devin API]
-    G --> H[Post status comment to GitHub issue]
-    G --> I[Devin creates tests and opens PR]
-    H --> J[Engineering team reviews progress]
-    I --> J
+    A[GitHub issue labeled coverage-improvement] --> B[GitHub Actions or local Docker run]
+    B --> C[main.py polling entrypoint]
+    C --> D[Fetch open labeled issues]
+    D --> E[Skip already processed issues]
+    E --> F[Parse issue body and coverage metrics]
+    F --> G[Create Devin prompt]
+    G --> H[Start Devin session via Devin API]
+    H --> I[Bot posts initial issue comment]
+    H --> J[Devin adds tests and opens PR]
+    J --> K[Devin posts follow-up issue comment]
+    I --> L[VP and engineers review progress]
+    K --> L
 ```
 
-## What the bot does
+## Architecture decisions
 
-- **Polls GitHub:** Finds open issues in `GITHUB_REPOSITORY` with the configured label, defaulting to `autotest`.
-- **Extracts coverage context:** Reads issue title, body, repository, target file, and coverage numbers from the issue body.
-- **Starts Devin work:** Creates a Devin session with instructions to add focused tests and open a PR.
-- **Avoids duplicate sessions:** Tracks processed issues in `outputs/processed-issues.json` and checks for an existing bot comment marker.
-- **Posts progress:** Adds a lightweight issue comment showing the Devin session, target file, and coverage before/after status.
-- **Writes artifacts:** Stores logs and summaries under `outputs/`.
+- **Polling over webhooks:** Easier to demo and debug. No public webhook endpoint or GitHub App setup is required.
+- **GitHub issues as the queue:** Engineers can describe risk, target files, and acceptance criteria in a familiar place.
+- **Devin as the worker:** The bot does not try to write tests itself. It delegates repository exploration, code changes, test execution, and PR creation to Devin.
+- **Small Python modules:** The code is split by responsibility so future extensions are straightforward.
+- **Lightweight observability:** GitHub comments, JSONL logs, JSON results, and Markdown reports show what happened.
 
 ## Project structure
 
-The code is organized around small, focused modules under `src/test_coverage_bot/`:
-
-- **`main.py`:** Root entrypoint used locally, by Docker, and by GitHub Actions.
-- **`cli.py`:** Parses command-line flags, loads `.env.local`, and runs the polling loop.
-- **`application.py`:** Coordinates polling, duplicate checks, Devin session creation, comments, state, and outputs.
-- **`github_client.py`:** Fetches labeled issues and posts GitHub issue comments.
-- **`devin_client.py`:** Creates Devin sessions and normalizes Devin session references.
-- **`issue_parser.py`:** Converts GitHub issue JSON or fixtures into typed issue models.
-- **`prompting.py`:** Builds the Devin prompt and GitHub issue comment body.
-- **`storage.py`:** Handles processed-issue state, JSONL logs, and Markdown/JSON reports.
-- **`config.py` and `models.py`:** Define typed configuration and domain models.
+```text
+main.py                         # Root entrypoint for local, Docker, and GitHub Actions
+src/test_coverage_bot/
+  application.py                # Orchestrates polling, duplicate checks, Devin, comments, outputs
+  cli.py                        # CLI args, env loading, polling loop
+  config.py                     # Runtime configuration
+  devin_client.py               # Devin API client
+  github_client.py              # GitHub issue/comment API client
+  issue_parser.py               # Issue labels, target file, coverage metrics
+  prompting.py                  # Devin prompt and issue comment text
+  storage.py                    # State, logs, JSON results, Markdown report
+  models.py                     # Domain models
+```
 
 ## Issue format
 
-The bot works best when the issue body includes coverage data in this format:
+The bot works best when issues include coverage data and acceptance criteria:
 
 ```md
 Coverage data:
@@ -70,169 +74,128 @@ Coverage data:
 
 Why this matters:
 
-Explain the business or engineering risk.
+Explain the production or engineering risk.
 
 Acceptance criteria:
 
-- Cover the important behavior.
-- Run the relevant test command.
-- Open a PR with coverage before and after when available.
+- Add focused tests for the important behavior.
+- Run the relevant test or coverage command.
+- Open a PR and comment with coverage before/after.
 ```
 
-## Requirements
+## Environment
 
-- Docker
-- Devin API credentials:
-  - `DEVIN_API_KEY`
-  - `DEVIN_ORG_ID`
-- GitHub token with permission to read issues and write issue comments:
-  - `GITHUB_TOKEN`
-
-## Environment variables
-
-Copy `.env.example` to `.env.local` and fill in the values:
+Copy the example env file:
 
 ```bash
 cp .env.example .env.local
 ```
 
-Required for live runs:
+Set these for live runs:
 
 - **`DEVIN_API_KEY`**: Devin API key.
 - **`DEVIN_ORG_ID`**: Devin organization ID.
-- **`GITHUB_TOKEN`**: GitHub token with issue read/comment permissions.
-- **`GITHUB_REPOSITORY`**: Repository to poll, for example `apache/superset`.
+- **`GITHUB_TOKEN`**: Token that can read issues and write issue comments.
+- **`GITHUB_REPOSITORY`**: Target repo, for example `arjun-krishna1/superset`.
 
 Optional:
 
-- **`DEVIN_CREATE_AS_USER_ID`**: Devin user attribution for created sessions.
-- **`AUTOTEST_LABEL`**: Label to poll for. Defaults to `autotest`.
-- **`POLL_INTERVAL_SECONDS`**: Poll interval. Defaults to `600`.
-- **`DEVIN_API_BASE_URL`**: Defaults to `https://api.devin.ai/v3`.
-- **`GITHUB_API_BASE_URL`**: Defaults to `https://api.github.com`.
+- **`DEVIN_CREATE_AS_USER_ID`**: Devin user attribution.
+- **`ISSUE_LABEL`**: Defaults to `coverage-improvement`.
+- **`POLL_INTERVAL_SECONDS`**: Defaults to `600`.
 
-## Local dry run
+## Run locally
 
-Build the image:
+### 1. Build the image
 
 ```bash
 docker build -t test-coverage-bot .
 ```
 
-Run a one-shot dry-run simulation with the included issue-list fixture:
+### 2. Dry-run with the included fixture
 
 ```bash
 docker run --rm \
   -v "$PWD/outputs:/app/outputs" \
   test-coverage-bot \
     --repo apache/superset \
-    --fixture examples/github-issues-autotest.fixture.json \
+    --fixture examples/github-issues-coverage-improvement.fixture.json \
     --dry-run \
     --once \
     --output-dir outputs
 ```
 
-Inspect generated outputs:
-
-```bash
-cat outputs/devin-remediation-report.md
-cat outputs/events.jsonl
-```
-
-## Local Docker Compose dry run
-
-Create a local env file:
-
-```bash
-cp .env.example .env.local
-```
-
-Then run:
-
-```bash
-docker compose up --build
-```
-
-The default Compose command runs one dry-run poll using `examples/github-issues-autotest.fixture.json`.
-
-## Live polling run
-
-Run the bot against GitHub:
+### 3. Live one-shot run
 
 ```bash
 docker run --rm \
   --env-file .env.local \
   -v "$PWD/outputs:/app/outputs" \
   test-coverage-bot \
-    --repo "$GITHUB_REPOSITORY" \
-    --label "$AUTOTEST_LABEL" \
+    --label coverage-improvement \
+    --once \
     --output-dir outputs \
     --state-file outputs/processed-issues.json
 ```
 
-The bot polls every `POLL_INTERVAL_SECONDS` seconds until stopped.
-
-For a bounded demo run, use `--max-cycles`:
+### 4. Bounded polling run
 
 ```bash
 docker run --rm \
   --env-file .env.local \
   -v "$PWD/outputs:/app/outputs" \
   test-coverage-bot \
-    --repo "$GITHUB_REPOSITORY" \
-    --label "$AUTOTEST_LABEL" \
+    --label coverage-improvement \
     --max-cycles 6 \
     --output-dir outputs \
     --state-file outputs/processed-issues.json
 ```
 
-With the default interval of 600 seconds, `--max-cycles 6` runs for about one hour and polls every 10 minutes.
+With the default 600-second interval, `--max-cycles 6` polls for about one hour.
 
-## GitHub Actions demo workflow
+## Run with GitHub Actions
 
-This repo includes `.github/workflows/autotest.yml`.
+This repo includes `.github/workflows/coverage-improvement.yml`.
 
-The workflow:
-
-1. Runs on a schedule or manually through `workflow_dispatch`.
-2. Builds the Docker image.
-3. Runs the bot for up to 6 polling cycles.
-4. Polls every 10 minutes while the workflow is running.
-5. Creates Devin sessions for newly discovered `autotest` issues.
-6. Uploads `outputs/` as an artifact.
-
-To use it:
+Setup:
 
 1. Push this repo to GitHub.
 2. Add repository secrets:
    - `DEVIN_API_KEY`
    - `DEVIN_ORG_ID`
    - Optional: `DEVIN_CREATE_AS_USER_ID`
-3. Create or choose a GitHub issue in the repository.
-4. Add coverage context and acceptance criteria to the issue body.
-5. Add the `autotest` label.
-6. Run the workflow manually or wait for the next scheduled run.
+3. Ensure the workflow has:
+   - `issues: write`
+   - `contents: read`
+4. Create issues with coverage context.
+5. Add the `coverage-improvement` label.
+6. Run the workflow manually or wait for the scheduled run.
 
-## Observability
+The workflow builds the Docker image, polls every 10 minutes while running, starts Devin sessions, comments on issues, and uploads `outputs/` as an artifact.
 
-The simplest way to tell whether the automation is working:
+## Observable outputs
 
-- **Issue comments:** The bot comments when Devin automation starts.
-- **Coverage before:** Parsed from the issue body and shown in the comment/report.
-- **Coverage after:** Marked pending until Devin's PR reports updated coverage.
-- **Local logs:** `outputs/events.jsonl` records poll starts, skipped issues, session creation, and completion.
-- **Summary report:** `outputs/devin-remediation-report.md` summarizes issue, target file, Devin session, status, coverage before, and coverage after.
-- **Structured results:** `outputs/devin-remediation-results.json` stores machine-readable results.
+- **Initial issue comment:** Bot posts Devin session URL, target file, and coverage before.
+- **Follow-up issue comment:** Devin is instructed to post PR URL, tests run, updated coverage, and caveats.
+- **`outputs/events.jsonl`:** Poll and processing events.
+- **`outputs/devin-remediation-results.json`:** Structured run results.
+- **`outputs/devin-remediation-report.md`:** Human-readable run summary.
+- **`outputs/processed-issues.json`:** State file that prevents duplicate Devin sessions.
 
-## Why Devin is the core primitive
+## Why Devin is uniquely suited
 
-A normal script can find labeled issues and post comments. Devin is what makes the workflow valuable: it can inspect an unfamiliar repository, understand nearby test patterns, write targeted tests, run commands, iterate on failures, and open a PR with technical context.
+A normal automation can find labeled issues and call APIs. It cannot reliably inspect an unfamiliar codebase, understand existing test patterns, choose the right testing approach, edit code, run tests, debug failures, and open a reviewable PR.
 
-That turns a passive coverage backlog into active remediation work without requiring engineers to manually triage every gap.
+Devin is the core primitive because it turns a loosely specified coverage issue into an autonomous engineering task:
 
-## Future extensions
+- **Repository understanding:** Finds relevant code and nearby tests.
+- **Code generation:** Adds focused tests instead of broad refactors.
+- **Iteration:** Runs commands, observes failures, and fixes them.
+- **Review readiness:** Opens PRs with summaries, tests run, and issue links.
+- **Communication:** Posts progress and completion updates back to GitHub.
 
-- Add a follow-up workflow that reads PR coverage output and updates the original issue with coverage after.
-- Add Playwright or browser-based QA issues for workflows that are hard to cover with unit tests.
-- Add dashboard-style reporting across all `autotest` issues.
-- Add routing logic for different labels such as `autotest-frontend`, `autotest-backend`, or `autotest-e2e`.
+## Next steps for a customer engagement
+
+- **Browser QA:** Use Playwright/browser-based agents for user workflows that unit tests cannot cover well.
+- **Dashboard:** Aggregate issues, PRs, coverage before/after, and time-to-remediation.
+- **Policy controls:** Add allowlists, PR size limits, and reviewer assignment rules.

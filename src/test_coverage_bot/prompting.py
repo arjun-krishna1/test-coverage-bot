@@ -47,7 +47,15 @@ Expected workflow:
 3. Add the smallest high-signal tests that cover the acceptance criteria without broad refactors.
 4. Run the most relevant test command and any targeted coverage command you can identify.
 5. Open a pull request with a clear title, concise summary, tests run, coverage before, coverage after when available, and a link back to the issue.
-6. If a pull request cannot be opened, leave a concise technical status update explaining the blocker and the exact next step.
+6. After the pull request is opened, post a follow-up comment on the source GitHub issue with the PR link, coverage after, tests run, and any remaining limitations.
+7. If a pull request cannot be opened, leave a concise technical status update explaining the blocker and the exact next step.
+
+Required follow-up issue comment:
+- Post it on this source issue: {issue.html_url}
+- Start with: "## Coverage improvement automation completed"
+- Include: pull request URL, summary of test coverage added, commands run, coverage before, coverage after, and any caveats.
+- If exact updated coverage is unavailable, include the best available evidence from the tests or coverage command and explain what prevented exact measurement.
+- Do not leave the source issue with only the initial "automation started" comment.
 
 Quality bar:
 - Prefer deterministic unit or component tests over brittle end-to-end tests unless the issue explicitly requires browser coverage.
@@ -67,7 +75,7 @@ class IssueCommentBuilder:
         status = "dry-run" if dry_run else "created"
         return f"""{COMMENT_MARKER}
 
-## Autotest automation started
+## Coverage improvement automation started
 
 - **Status:** Devin session {status}
 - **Devin session:** {session}
@@ -75,4 +83,4 @@ class IssueCommentBuilder:
 
 {self.coverage_formatter.summary(issue)}
 
-The polling bot asked Devin to create a focused test-coverage pull request, run the relevant tests, and report coverage before and after when available."""
+The polling bot asked Devin to create a focused test-coverage pull request, run the relevant tests, and return to this issue with a follow-up comment that includes the PR link, updated coverage, tests run, and any caveats."""

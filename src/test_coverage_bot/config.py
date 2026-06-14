@@ -37,7 +37,7 @@ class ConfigFactory:
 
         return Config(
             repository=repository,
-            label=args.label or os.environ.get("AUTOTEST_LABEL", DEFAULT_LABEL),
+            label=args.label or os.environ.get("ISSUE_LABEL", DEFAULT_LABEL),
             interval_seconds=args.interval
             if args.interval is not None
             else int(os.environ.get("POLL_INTERVAL_SECONDS", DEFAULT_INTERVAL_SECONDS)),

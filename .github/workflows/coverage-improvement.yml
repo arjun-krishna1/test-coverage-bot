@@ -1,4 +1,4 @@
-name: Autotest Devin Automation
+name: Coverage Improvement Devin Automation
 
 on:
   schedule:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: autotest-devin-automation
+  group: coverage-improvement-devin-automation
   cancel-in-progress: false
 
 jobs:
@@ -25,9 +25,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: outputs/processed-issues.json
-          key: autotest-processed-issues-${{ github.run_id }}
+          key: coverage-improvement-processed-issues-${{ github.run_id }}
           restore-keys: |
-            autotest-processed-issues-
+            coverage-improvement-processed-issues-
 
       - name: Build Docker image
         run: docker build -t test-coverage-bot .
@@ -40,12 +40,12 @@ jobs:
             -e DEVIN_CREATE_AS_USER_ID="${{ secrets.DEVIN_CREATE_AS_USER_ID }}" \
             -e GITHUB_TOKEN="${{ github.token }}" \
             -e GITHUB_REPOSITORY="${{ github.repository }}" \
-            -e AUTOTEST_LABEL="autotest" \
+            -e ISSUE_LABEL="coverage-improvement" \
             -e POLL_INTERVAL_SECONDS="600" \
             -v "$PWD/outputs:/app/outputs" \
             test-coverage-bot \
               --repo "${{ github.repository }}" \
-              --label autotest \
+              --label coverage-improvement \
               --max-cycles 6 \
               --output-dir outputs \
               --state-file outputs/processed-issues.json

@@ -7,9 +7,6 @@
       "html_url": "https://github.com/apache/superset/issues/12345",
       "labels": [
         {
-          "name": "autotest"
-        },
-        {
           "name": "coverage-improvement"
         }
       ],

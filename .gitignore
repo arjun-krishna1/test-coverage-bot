@@ -6,3 +6,4 @@ outputs/
 .devin-automation/
 .coverage
 .pytest_cache/
+*.html

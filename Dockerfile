@@ -4,8 +4,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
-COPY scripts/ /app/scripts/
+COPY main.py /app/main.py
+COPY src/ /app/src/
 COPY examples/ /app/examples/
 
-ENTRYPOINT ["python", "scripts/poll_autotest_issues.py"]
+ENTRYPOINT ["python", "main.py"]
 CMD ["--repo", "apache/superset"]

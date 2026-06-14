@@ -42,6 +42,20 @@ flowchart TD
 - **Posts progress:** Adds a lightweight issue comment showing the Devin session, target file, and coverage before/after status.
 - **Writes artifacts:** Stores logs and summaries under `outputs/`.
 
+## Project structure
+
+The code is organized around small, focused modules under `src/test_coverage_bot/`:
+
+- **`main.py`:** Root entrypoint used locally, by Docker, and by GitHub Actions.
+- **`cli.py`:** Parses command-line flags, loads `.env.local`, and runs the polling loop.
+- **`application.py`:** Coordinates polling, duplicate checks, Devin session creation, comments, state, and outputs.
+- **`github_client.py`:** Fetches labeled issues and posts GitHub issue comments.
+- **`devin_client.py`:** Creates Devin sessions and normalizes Devin session references.
+- **`issue_parser.py`:** Converts GitHub issue JSON or fixtures into typed issue models.
+- **`prompting.py`:** Builds the Devin prompt and GitHub issue comment body.
+- **`storage.py`:** Handles processed-issue state, JSONL logs, and Markdown/JSON reports.
+- **`config.py` and `models.py`:** Define typed configuration and domain models.
+
 ## Issue format
 
 The bot works best when the issue body includes coverage data in this format:

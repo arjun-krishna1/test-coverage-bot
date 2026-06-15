@@ -16,8 +16,6 @@ This bot turns that backlog into an actionable workflow:
 4. The bot starts a Devin session with the issue context, target file, coverage data, and acceptance criteria.
 5. Devin adds tests, runs relevant commands, opens a PR, and posts a follow-up issue comment with the PR link, updated coverage, tests run, and caveats.
 
-For demo simplicity, this uses polling instead of GitHub webhook infrastructure. The label is still the product trigger; the workflow discovers labeled issues on a schedule.
-
 ## How it works
 
 ```mermaid
@@ -38,9 +36,8 @@ flowchart TD
 
 ## Architecture decisions
 
-- **Polling over webhooks:** Easier to demo and debug. No public webhook endpoint or GitHub App setup is required.
 - **GitHub issues as the queue:** Engineers can describe risk, target files, and acceptance criteria in a familiar place.
-- **Devin as the worker:** The bot does not try to write tests itself. It delegates repository exploration, code changes, test execution, and PR creation to Devin.
+- **Devin as the autonomous software engineer:** This bot does not try to write tests itself but communicates with Devin instead. It delegates repository exploration, code changes, test execution, and PR creation to Devin.
 - **Small Python modules:** The code is split by responsibility so future extensions are straightforward.
 - **Lightweight observability:** GitHub comments, JSONL logs, JSON results, and Markdown reports show what happened.
 
